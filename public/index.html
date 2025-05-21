@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda - Gestión de Productos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Gestión de Productos</h1>
+
+        <!-- Formulario para agregar/editar productos -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Agregar Nuevo Producto</h5>
+                <form id="productoForm">
+                    <input type="hidden" id="productoId">
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="precio" class="form-label">Precio</label>
+                        <input type="number" class="form-control" id="precio" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stock" class="form-label">Stock</label>
+                        <input type="number" class="form-control" id="stock" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">Limpiar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla de productos -->
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="productosTabla">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        const API_URL = 'https://40.82.178.138/api/productos';
+        let editando = false;
+
+        // Cargar productos al iniciar
+        document.addEventListener('DOMContentLoaded', cargarProductos);
+
+        // Manejar envío del formulario
+        document.getElementById('productoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            guardarProducto();
+        });
+
+        // Función para cargar productos
+        async function cargarProductos() {
+            try {
+                const response = await fetch(API_URL);
+                const productos = await response.json();
+                const tabla = document.getElementById('productosTabla');
+                tabla.innerHTML = '';
+
+                productos.forEach(producto => {
+                    tabla.innerHTML += `
+                        <tr>
+                            <td>${producto.id}</td>
+                            <td>${producto.nombre}</td>
+                            <td>$${producto.precio}</td>
+                            <td>${producto.stock}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="editarProducto(${producto.id})">Editar</button>
+                                <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${producto.id})">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error al cargar productos:', error);
+                alert('Error al cargar los productos');
+            }
+        }
+
+        // Función para guardar/actualizar producto
+        async function guardarProducto() {
+            const producto = {
+                nombre: document.getElementById('nombre').value,
+                precio: parseFloat(document.getElementById('precio').value),
+                stock: parseInt(document.getElementById('stock').value)
+            };
+
+            const id = document.getElementById('productoId').value;
+            const url = id ? `${API_URL}/${id}` : API_URL;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(producto)
+                });
+
+                if (response.ok) {
+                    limpiarFormulario();
+                    cargarProductos();
+                    alert(id ? 'Producto actualizado con éxito' : 'Producto agregado con éxito');
+                }
+            } catch (error) {
+                console.error('Error al guardar producto:', error);
+                alert('Error al guardar el producto');
+            }
+        }
+
+        // Función para editar producto
+        async function editarProducto(id) {
+            try {
+                const response = await fetch(`${API_URL}/${id}`);
+                const producto = await response.json();
+
+                document.getElementById('productoId').value = producto.id;
+                document.getElementById('nombre').value = producto.nombre;
+                document.getElementById('precio').value = producto.precio;
+                document.getElementById('stock').value = producto.stock;
+            } catch (error) {
+                console.error('Error al cargar producto:', error);
+                alert('Error al cargar el producto');
+            }
+        }
+
+        // Función para eliminar producto
+        async function eliminarProducto(id) {
+            if (confirm('¿Está seguro de que desea eliminar este producto?')) {
+                try {
+                    const response = await fetch(`${API_URL}/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        cargarProductos();
+                        alert('Producto eliminado con éxito');
+                    }
+                } catch (error) {
+                    console.error('Error al eliminar producto:', error);
+                    alert('Error al eliminar el producto');
+                }
+            }
+        }
+
+        // Función para limpiar formulario
+        function limpiarFormulario() {
+            document.getElementById('productoForm').reset();
+            document.getElementById('productoId').value = '';
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
